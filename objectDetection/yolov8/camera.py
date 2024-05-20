@@ -14,22 +14,6 @@ def getFcm(title, body):
     }
     
     return fcm
-
-def sendFcm(fcm):
-    headers = {
-        "Content-Type": "application/json"
-    }
-    
-    fcm_url = "http://118.219.42.214:8080/api/fcm/send"
-    
-    response = requests.post(fcm_url, data=json.dumps(fcm), headers=headers)    #fcm post
-    
-    print("FCM Status Code:", response.status_code)
-    try:
-        response_json = response.json()
-        print("Response JSON:", response_json)
-    except ValueError:
-        print("Response Content:", response.text)
     
 def getLog(content):
     log = {
@@ -42,23 +26,26 @@ def getLog(content):
     
     return log
 
-def sendLog(log):
+def sendHttpPost(url, data):
     headers = {
         "Content-Type": "application/json"
     }
     
-    log_url = "http://118.219.42.214:8080/api/logs"
+    response = requests.post(url, data=json.dumps(data), headers=headers)
     
-    response = requests.post(log_url, data=json.dumps(log), headers=headers)    #log post
-    
-    print("Log Status Code:", response.status_code)
+    print("Status Code:", response.status_code)
     try:
         response_json = response.json()
         print("Response JSON:", response_json)
     except ValueError:
         print("Response Content:", response.text)
-    
 
+def sendFcm(fcm):
+    sendHttpPost("http://118.219.42.214:8080/api/fcm/send", fcm)
+
+def sendLog(log):
+    sendHttpPost("http://118.219.42.214:8080/api/logs", log)
+    
 ### HTTP ###
 
 detection_active = True
