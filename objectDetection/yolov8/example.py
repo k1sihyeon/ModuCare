@@ -7,6 +7,14 @@ fcm = {
     'body' : 'TX2 Body'
 }
 
+log = {
+  "camId": 1,
+  "content": "Danger Detected!!",
+  "imagePath": "/path/to/image.jpg", 
+  "createdAt": "2024-05-16T16:26:00",
+  "isChecked": False
+}
+
 headers = {
     "Content-Type": "application/json"
 }
