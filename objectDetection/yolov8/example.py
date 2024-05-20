@@ -9,16 +9,6 @@ fcm = {
     'body' : 'TX2 Body'
 }
 
-current = datetime.now().isoformat()
-
-log = {
-  "camId": 1,
-  "content": "이미지 감지됨",
-  "imagePath": "/path/to/image.jpg", 
-  "createdAt": current,
-  "isChecked": False
-}
-
 headers = {
     "Content-Type": "application/json"
 }
@@ -50,10 +40,18 @@ for result in results:
         if int(box.cls) in danger:
             print("!!!!!!! danger detected !!!!!!!!")
 
-            current = datetime.now().isoformat()
+            current = datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
+
+            log = {
+                "camId": 1,
+                "content": "on TX2 이미지 감지됨",
+                "imagePath": "/path/to/image.jpg", 
+                "createdAt": current,
+                "isChecked": False
+            }
 
             fcm_response = requests.post(fcm_url, json=fcm, headers=headers)    #fcm post
-            log_response = requests.post(log_url, json=json.dumps(log), headers=headers)    #log post
+            log_response = requests.post(log_url, data=json.dumps(log), headers=headers)    #log post
             
             print("FCM Status Code:", fcm_response.status_code)
             print("Log Status Code:", log_response.status_code)
