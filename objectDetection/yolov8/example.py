@@ -1,5 +1,7 @@
 from ultralytics import YOLO
 import requests
+import json
+from datetime import datetime
 
 fcm = {
     'token' : 'eb9PJybxQ66VOlakaltS42:APA91bHEQpdDaUS1LRxZoMl701oYkN4ntF7uNdDfN0C_mSfe1CO4TnR-wEpa19ofi_RhmkG_Ew90FfRoBTMoW9jEgxvlev3DT0iC2D-x1ZzwjJEKlJYbzpdp4TaRvRPbLPtMhUAWHoav',
@@ -7,11 +9,22 @@ fcm = {
     'body' : 'TX2 Body'
 }
 
+current = datetime.now().isoformat()
+
+log = {
+  "camId": 1,
+  "content": "이미지 감지됨",
+  "imagePath": "/path/to/image.jpg", 
+  "createdAt": current,
+  "isChecked": False
+}
+
 headers = {
     "Content-Type": "application/json"
 }
 
-url = "http://118.219.42.214:8080/api/fcm/send"
+fcm_url = "http://118.219.42.214:8080/api/fcm/send"
+log_url = "http://118.219.42.214:8080/api/logs"
 
 
 # Load a YOLOv8n PyTorch model
@@ -36,15 +49,28 @@ for result in results:
         detected_labels.append(trt_model.names[int(box.cls)])
         if int(box.cls) in danger:
             print("!!!!!!! danger detected !!!!!!!!")
-            response = requests.post(url, json=fcm, headers=headers)
 
-            print("Status Code:", response.status_code)
+            current = datetime.now().isoformat()
+
+            fcm_response = requests.post(fcm_url, json=fcm, headers=headers)    #fcm post
+            log_response = requests.post(log_url, json=json.dumps(log), headers=headers)    #log post
+            
+            print("FCM Status Code:", fcm_response.status_code)
+            print("Log Status Code:", log_response.status_code)
 
             try:
-                response_json = response.json()
+                response_json = fcm_response.json()
                 print("Response JSON:", response_json)
             except ValueError:
-                print("Response Content:", response.text)
+                print("Response Content:", fcm_response.text)
+
+            try:
+                response_json = log_response.json()
+                print("Response JSON:", response_json)
+            except ValueError:
+                print("Response Content:", log_response.text)
+            
+
 
 print(detected_labels)
 
