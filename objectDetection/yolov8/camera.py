@@ -15,11 +15,11 @@ def getFcm(title, body):
     
     return fcm
     
-def getLog(content):
+def getLog(content, imagePath="/error.jpg"):
     log = {
         "camId": 1,
         "content": content,
-        "imagePath": "/path/to/image.jpg", 
+        "imagePath": imagePath, 
         "createdAt": datetime.now().strftime('%Y-%m-%dT%H:%M:%S'),
         "isChecked": False
     }
