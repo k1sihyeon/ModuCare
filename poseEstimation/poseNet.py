@@ -60,6 +60,8 @@ while True:
     if img is None: # timeout
         continue  
 
+    print(f" image width: {img.width} image height {img.height}")
+
     # perform pose estimation (with overlay)
     poses = net.Process(img, overlay=args.overlay)
 
@@ -69,6 +71,39 @@ while True:
     for pose in poses:
         print(pose)
         print(pose.Keypoints)
+
+        left_ankle_idx = pose.FindKeypoint('left_ankle')
+        right_ankle_idx = pose.FindKeypoint('right_ankle')
+        neck_idx = pose.FindKeypoint('neck')
+
+        if neck_idx < 0 :
+            continue
+
+        ankle_idx = 0
+        if left_ankle_idx < 0 and right_ankle_idx < 0:
+            continue
+
+        # if left_ankle_idx >= 0 and right_ankle_idx >= 0:
+        #     pass
+
+        # left_ankle = pose.Keypoints[left_ankle_idx]
+        # right_ankle = pose.Keypoints[right_ankle_idx]
+        if left_ankle_idx < 0:
+            ankle_idx = right_ankle_idx
+        else :
+             ankle_idx = left_ankle_idx
+
+        ankle = pose.Keypoinst[ankle_idx]             
+
+        ankle_point_x = ankle.x
+        ankle_point_y = ankle.x
+
+        neck = pose.Keypoints[neck_idx]
+        neck_point_x = neck.x
+        neck_point_y = neck.y
+
+        print(f"person {pose.ID} is pointing towards ({point_x}, {point_y})")
+    
         print('Links', pose.Links)
 
     # render the image
