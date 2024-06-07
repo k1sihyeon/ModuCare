@@ -31,6 +31,8 @@ https://rawgit.com/dusty-nv/jetson-inference/master/docs/html/python/jetson.infe
 
 jetson-utils (package)
 https://rawgit.com/dusty-nv/jetson-inference/master/docs/html/python/jetson.utils.html
+https://github.com/dusty-nv/jetson-utils/tree/master
+https://github.com/dusty-nv/jetson-inference/blob/master/docs/aux-image.md
 
 """
 
@@ -97,10 +99,9 @@ topology_keypoint = {
 
 import sys
 import argparse
-import numpy as np
 
 from jetson_inference import poseNet
-from jetson_utils import videoSource, videoOutput, Log
+from jetson_utils import videoSource, videoOutput, Log, cudaDrawRect, cudaFont
 
 
 # parse the command line
@@ -127,77 +128,9 @@ net = poseNet(args.network, sys.argv, args.threshold)
 # create video sources & outputs
 camera = videoSource(args.input, argv=sys.argv)
 display = videoOutput(args.output, argv=sys.argv)
+font = cudaFont()
 
-
-
-def preprocess_keypoint(keypoints):
-    if not keypoints:
-         return None
-    keypoints = np.array(keypoints)
-    keypoints -= keypoints[0] # Center the keypoints
-
-    return keypoints
-
-
-def dect_fall_helper():
-        left_ankle_idx = pose.FindKeypoint('left_ankle')
-        right_ankle_idx = pose.FindKeypoint('right_ankle')
-        neck_idx = pose.FindKeypoint('neck')
-
-        if neck_idx < 0 :
-            pass
-
-        ankle_idx = 0
-        if left_ankle_idx < 0 and right_ankle_idx < 0:
-            pass
-
-        # if left_ankle_idx >= 0 and right_ankle_idx >= 0:
-        #     pass
-
-        # left_ankle = pose.Keypoints[left_ankle_idx]
-        # right_ankle = pose.Keypoints[right_ankle_idx]
-        if left_ankle_idx < 0:
-            ankle_idx = right_ankle_idx
-        else :
-             ankle_idx = left_ankle_idx
-
-        ankle = pose.Keypoinst[ankle_idx]             
-
-        ankle_point_x = ankle.x
-        ankle_point_y = ankle.x
-
-        neck = pose.Keypoints[neck_idx]
-        neck_point_x = neck.x
-        neck_point_y = neck.y
-
-
-
-def detect_fall(keypoints):     
-    if not keypoints:
-        return False
-     
-    if len(keypoints) < 17:
-        pass
-        # dect_fall_helper() # unfinished function         
-     
-    # upper_body_keypoints
-    ubks = keypoints[:11]
-
-    # lower_body_keypoints
-    lbks = keypoints[11:]
-
-    """ extra works are needed for normalization and handling keypoints structure"""
-    ## these are buggy codes
-    # y_diff = np.abs(ubks[:, 1] - lbks[:, 1])
-    # x_diff = np.abs(ubks[:, 0] - lbks[:, 0])
-
-    # if np.max(y_diff) <= 0.05 and np.max(x_diff) > 0.5 :
-    #      return True
-    return False
-
-counters = np.zeros(16) 
-fall_threshold = 2
-
+fall_count = 0
 # process frames until EOS or the user exits
 while True:
     # capture the next image
@@ -206,7 +139,7 @@ while True:
     if img is None: # timeout
         continue  
 
-    # print(f" image width: {img.width} image height {img.height}")
+    print(f" image width: {img.width} image height {img.height}")
 
     # perform pose estimation (with overlay)
     poses = net.Process(img, overlay=args.overlay)
@@ -214,20 +147,25 @@ while True:
     # print the pose results
     print("detected {:d} objects in image".format(len(poses)))
 
+
     for pose in poses:        
-        # pose == ObjectPose
-        keypoints = np.array(len(pose.Keypoints))
-        preprocess_keypoint(keypoints)
+            font.OverlayText(img, text=f"Fall Count: {fall_count}", 
+                         x=5, y=5 * (font.GetSize() + 5),
+                         color=font.White, background=font.Gray40)
+            neck_id = pose.FindKeypoint('neck')
+            r_ankle_id = pose.FindKeypoint('right_ankle')
+            l_ankle_id = pose.FindKeypoint('left_ankle')
 
-        if detect_fall(keypoints):
-            counters[pose.ID] += 1
-        
-        
-    check = np.where(counters > 2, True, False)
-
-    if sum(check) > 0:
-        print("fall detected!!!")
-
+            if neck_id < 0:
+                  continue
+            if r_ankle_id + l_ankle_id < 0:
+                  continue            
+            cudaDrawRect(img, (pose.Left, pose.Top, pose.Right, pose.Bottom), line_color=(0, 75, 255, 200))
+            x_diff = abs(pose.Left -  pose.Right)
+            y_diff = abs(pose.Top - pose.Bottom)
+            if x_diff > y_diff:
+                  fall_count += 1
+                  
 
     # render the image
     display.Render(img)
