@@ -99,6 +99,8 @@ topology_keypoint = {
 
 import sys
 import argparse
+import threading 
+
 
 from jetson_inference import poseNet
 from jetson_utils import videoSource, videoOutput, Log, cudaDrawRect, cudaFont
@@ -122,15 +124,35 @@ except:
 	parser.print_help()
 	sys.exit(0)
 
+
+def detect_fall(pose):
+
+    global detection_flag
+    global wait_flag
+
+    x_diff = abs(pose.Left -  pose.Right)
+    y_diff = abs(pose.Top - pose.Bottom)
+            
+    if x_diff > y_diff:
+        cudaDrawRect(img, (pose.Left, pose.Top, pose.Right, pose.Bottom), line_color=(0, 75, 255, 200))
+        detection_flag = True
+        wait_flag = True
+    else :
+        detection_flag = False
+
 # load the pose estimation model
 net = poseNet(args.network, sys.argv, args.threshold)
 
 # create video sources & outputs
 camera = videoSource(args.input, argv=sys.argv)
 display = videoOutput(args.output, argv=sys.argv)
-font = cudaFont()
+font = cudaFont() # font object to print texts on the screen
 
 fall_count = 0
+wait_count = 0
+wait_flag = False
+detection_flag = False
+
 # process frames until EOS or the user exits
 while True:
     # capture the next image
@@ -139,33 +161,54 @@ while True:
     if img is None: # timeout
         continue  
 
-    print(f" image width: {img.width} image height {img.height}")
-
     # perform pose estimation (with overlay)
     poses = net.Process(img, overlay=args.overlay)
 
     # print the pose results
     print("detected {:d} objects in image".format(len(poses)))
 
+    if wait_count > 18:
+          wait_flag = False
+          wait_count = 0
+
+    # detection_flag = False
 
     for pose in poses:        
-            font.OverlayText(img, text=f"Fall Count: {fall_count}", 
-                         x=5, y=5 * (font.GetSize() + 5),
-                         color=font.White, background=font.Gray40)
+            nose_id = pose.FindKeypoint('nose')
             neck_id = pose.FindKeypoint('neck')
             r_ankle_id = pose.FindKeypoint('right_ankle')
             l_ankle_id = pose.FindKeypoint('left_ankle')
 
-            if neck_id < 0:
-                  continue
-            if r_ankle_id + l_ankle_id < 0:
-                  continue            
-            cudaDrawRect(img, (pose.Left, pose.Top, pose.Right, pose.Bottom), line_color=(0, 75, 255, 200))
-            x_diff = abs(pose.Left -  pose.Right)
-            y_diff = abs(pose.Top - pose.Bottom)
-            if x_diff > y_diff:
-                  fall_count += 1
+            if nose_id >= 0:
+                  nose = pose.Keypoints[nose_id]
+                  font.OverlayText(img, 
+                                    text=f"{pose.ID}",
+                                    x=int(nose.x),
+                                    y=int(nose.y -10),
+                                    color=font.White)
+
+            # if neck_id < 0:
+            #       continue
                   
+            if r_ankle_id + l_ankle_id < 0:
+                continue   
+
+            if wait_flag:
+                continue
+
+            detect_fall(pose)
+
+            if detection_flag :
+                  fall_count += 1
+
+    if wait_flag:
+          wait_count += 1
+    
+    font.OverlayText(img, text=f"Fall Count: {fall_count}", 
+                         x=5, y=5,
+                         color=font.White, background=font.Gray40)
+            
+            
 
     # render the image
     display.Render(img)
