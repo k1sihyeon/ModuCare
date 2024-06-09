@@ -99,11 +99,12 @@ topology_keypoint = {
 
 import sys
 import argparse
-import threading 
-
+import requests
+from PIL import Image
+from datetime import datetime
 
 from jetson_inference import poseNet
-from jetson_utils import videoSource, videoOutput, Log, cudaDrawRect, cudaFont
+from jetson_utils import videoSource, videoOutput, Log, cudaDrawRect, cudaFont, cudaToNumpy
 
 
 # parse the command line
@@ -126,19 +127,41 @@ except:
 
 
 def detect_fall(pose):
-
     global detection_flag
     global wait_flag
+    global bias
 
     x_diff = abs(pose.Left -  pose.Right)
     y_diff = abs(pose.Top - pose.Bottom)
             
-    if x_diff > y_diff:
+    if x_diff > y_diff * bias:
         cudaDrawRect(img, (pose.Left, pose.Top, pose.Right, pose.Bottom), line_color=(0, 75, 255, 200))
         detection_flag = True
         wait_flag = True
     else :
         detection_flag = False
+
+
+def printResponse(response):
+    print("Status Code : ", response.status_code)
+    try:
+         response_json = response.json()
+         print("Response JSON: ", response_json)
+    except ValueError:
+         print("Response content: ", response.text)
+
+def sendImage(file_path):
+    with open(file_path, 'rb') as file:
+        files = {'file':file}
+        response = requests.post("http://118.219.42.214:8080/api/image/upload", files=files)
+        printResponse(response)
+
+def postImage(img, format="JPEG"):
+    path = "/" + datetime.now().strftime('%Y_%m_%dT%H:%M:%S') + "jpg"
+    img_array = cudaToNumpy(img)
+    pil_image = Image.fromarray(img_array, 'RGB')
+    pil_image.save("detected" + path, format=format)
+
 
 # load the pose estimation model
 net = poseNet(args.network, sys.argv, args.threshold)
@@ -148,15 +171,20 @@ camera = videoSource(args.input, argv=sys.argv)
 display = videoOutput(args.output, argv=sys.argv)
 font = cudaFont() # font object to print texts on the screen
 
+# initialize global variables
 fall_count = 0
 wait_count = 0
 wait_flag = False
 detection_flag = False
+bias = 1.12
 
 # process frames until EOS or the user exits
 while True:
     # capture the next image
     img = camera.Capture()
+
+    # check captured image format 
+    # print("IMG format :  ",img.format) # format:  rgb8
 
     if img is None: # timeout
         continue  
@@ -167,24 +195,27 @@ while True:
     # print the pose results
     print("detected {:d} objects in image".format(len(poses)))
 
+
     if wait_count > 18:
           wait_flag = False
           wait_count = 0
 
     # detection_flag = False
 
+    # check each pose whether it has fallen
     for pose in poses:        
             nose_id = pose.FindKeypoint('nose')
             neck_id = pose.FindKeypoint('neck')
             r_ankle_id = pose.FindKeypoint('right_ankle')
             l_ankle_id = pose.FindKeypoint('left_ankle')
 
+            # put the pose's ID on the screen above it's head.
             if nose_id >= 0:
                   nose = pose.Keypoints[nose_id]
                   font.OverlayText(img, 
                                     text=f"{pose.ID}",
                                     x=int(nose.x),
-                                    y=int(nose.y -10),
+                                    y=int(nose.y -15),
                                     color=font.White)
 
             # if neck_id < 0:
@@ -199,11 +230,13 @@ while True:
             detect_fall(pose)
 
             if detection_flag :
-                  fall_count += 1
+                fall_count += 1
+                postImage(img)
 
     if wait_flag:
           wait_count += 1
     
+    # print fall count on the screen
     font.OverlayText(img, text=f"Fall Count: {fall_count}", 
                          x=5, y=5,
                          color=font.White, background=font.Gray40)
@@ -217,7 +250,7 @@ while True:
     display.SetStatus("{:s} | Network {:.0f} FPS".format(args.network, net.GetNetworkFPS()))
 
     # print out performance info
-    net.PrintProfilerTimes()
+    # net.PrintProfilerTimes()
 
     # exit on input/output EOS
     if not camera.IsStreaming() or not display.IsStreaming():
