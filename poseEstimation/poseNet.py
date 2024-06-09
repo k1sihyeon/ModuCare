@@ -104,6 +104,7 @@ from PIL import Image
 from datetime import datetime
 import requests
 import json
+import threading
 from requests_toolbelt.multipart.encoder import MultipartEncoder
 
 from jetson_inference import poseNet
@@ -145,7 +146,7 @@ def detect_fall(pose):
         detection_flag = False
 
 def saveImage(img, format="JPEG"):
-    file_name = datetime.now().strftime('%Y_%m_%dT%H:%M:%S') + ".jpg"
+    file_name = datetime.now().strftime('%Y_%m_%dT%H:%M:%S') + ".jpeg"
     img_array = cudaToNumpy(img)
     pil_image = Image.fromarray(img_array, 'RGB')
     image_path = "detected/" + file_name
@@ -219,7 +220,20 @@ def sendLog(log):
 
 def sendLocation(loc):
     sendHttpPost("http://118.219.42.214:8080/api/cameras", loc)
-
+    
+def sendFallDetection(img): #thread
+    # save the image to a file and send it to the server
+    imgPath, fileName = saveImage(img)
+    sendImage(imgPath)
+                
+    # send a log to the server
+    log = getLog("넘어짐 감지됨", fileName=fileName)
+    sendLog(log)
+                
+    # send a FCM to the user
+    fcm = getFcm("위험 상황이 감지되었습니다", "환자가 넘어졌습니다 on Jetson TX2")
+    sendFcm(fcm)
+                
 ### HTTP POST REQUESTS END ###
 ##############################
 
@@ -298,17 +312,9 @@ while True:
             if detection_flag :
                 fall_count += 1
                 
-                # save the image to a file and send it to the server
-                imgPath, fileName = saveImage(img)
-                sendImage(imgPath)
+                postThread = threading.Thread(target=sendFallDetection, args=(img,))
+                postThread.start()
                 
-                # send a log to the server
-                log = getLog("넘어짐 감지됨", fileName=fileName)
-                sendLog(log)
-                
-                # send a FCM to the user
-                fcm = getFcm("위험 상황이 감지되었습니다", "환자가 넘어졌습니다 on Jetson TX2")
-                sendFcm(fcm)
 
     # deactivate detect_fall() function until the wait_flag becomes false
     if wait_flag:
