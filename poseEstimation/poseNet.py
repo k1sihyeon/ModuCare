@@ -137,7 +137,7 @@ def detect_fall(pose):
     if x_diff > y_diff * bias:
         cudaDrawRect(img, (pose.Left, pose.Top, pose.Right, pose.Bottom), line_color=(0, 75, 255, 200))
         detection_flag = True
-        wait_flag = True
+        wait_flag = True # deactivate the function in few seconds 
     else :
         detection_flag = False
 
@@ -197,12 +197,10 @@ while True:
     # print the pose results
     print("detected {:d} objects in image".format(len(poses)))
 
-
+    # reset the wait_flag to activate detect_fall() 
     if wait_count > 18:
           wait_flag = False
           wait_count = 0
-
-    # detection_flag = False
 
     # check each pose whether it has fallen
     for pose in poses:        
@@ -223,9 +221,11 @@ while True:
             # if neck_id < 0:
             #       continue
                   
+            # skip the pose when ankles aren't detected
             if r_ankle_id + l_ankle_id < 0:
                 continue   
 
+            # pause the detector function in seconds when the image has posted
             if wait_flag:
                 continue
 
@@ -235,6 +235,7 @@ while True:
                 fall_count += 1
                 postImage(img)
 
+    # deactivate detect_fall() function until the wait_flag becomes false
     if wait_flag:
           wait_count += 1
     
