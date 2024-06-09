@@ -105,6 +105,7 @@ from datetime import datetime
 import requests
 import json
 import threading
+import os
 from requests_toolbelt.multipart.encoder import MultipartEncoder
 
 from jetson_inference import poseNet
@@ -168,7 +169,7 @@ def sendImage(file_path):
     with open(file_path, 'rb') as file:
         data = MultipartEncoder(
             fields={
-                'file': (file_path, file, 'image/jpeg')
+                'file': (os.path.basename(file_path), file, 'image/jpeg')
             }
         )
         headers = {
