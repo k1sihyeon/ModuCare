@@ -160,7 +160,9 @@ def postImage(img, format="JPEG"):
     path = "/" + datetime.now().strftime('%Y_%m_%dT%H:%M:%S') + "jpg"
     img_array = cudaToNumpy(img)
     pil_image = Image.fromarray(img_array, 'RGB')
-    pil_image.save("detected" + path, format=format)
+    image_title = "detected" + path
+    pil_image.save(image_title, format=format)
+    # sendImage(image_title)
 
 
 # load the pose estimation model
