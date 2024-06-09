@@ -147,7 +147,7 @@ def detect_fall(pose):
         detection_flag = False
 
 def saveImage(img, format="JPEG"):
-    file_name = datetime.now().strftime('%Y_%m_%dT%H:%M:%S') + ".jpeg"
+    file_name = datetime.now().strftime('%Y_%m_%dT%H_%M_%S') + ".jpeg"
     img_array = cudaToNumpy(img)
     pil_image = Image.fromarray(img_array, 'RGB')
     image_path = "detected/" + file_name
@@ -166,10 +166,12 @@ def printResponse(response):
          print("Response content: ", response.text)
 
 def sendImage(file_path):
+    new_file_name = os.path.basename(file_path)
+    
     with open(file_path, 'rb') as file:
         data = MultipartEncoder(
             fields={
-                'file': (os.path.basename(file_path), file, 'image/jpeg')
+                'file': (new_file_name, file, 'image/jpeg')
             }
         )
         headers = {
@@ -187,7 +189,7 @@ def getFcm(title, body):
     
     return fcm
     
-def getLog(content, camId=1, fileName="/path/to/image.jpg"):
+def getLog(content, camId=1, fileName="nullImage.jpeg"):
     log = {
         "camId": camId,
         "content": content,
