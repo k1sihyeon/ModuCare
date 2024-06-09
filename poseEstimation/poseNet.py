@@ -242,7 +242,7 @@ fall_count = 0
 wait_count = 0
 wait_flag = False
 detection_flag = False
-bias = 1.12
+bias = 1.12 
 
 # process frames until EOS or the user exits
 while True:
