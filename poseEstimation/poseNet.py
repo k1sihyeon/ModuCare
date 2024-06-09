@@ -102,6 +102,9 @@ import argparse
 import requests
 from PIL import Image
 from datetime import datetime
+import requests
+import json
+from requests_toolbelt.multipart.encoder import MultipartEncoder
 
 from jetson_inference import poseNet
 from jetson_utils import videoSource, videoOutput, Log, cudaDrawRect, cudaFont, cudaToNumpy
@@ -141,7 +144,17 @@ def detect_fall(pose):
     else :
         detection_flag = False
 
+def saveImage(img, format="JPEG"):
+    file_name = "/" + datetime.now().strftime('%Y_%m_%dT%H:%M:%S') + "jpg"
+    img_array = cudaToNumpy(img)
+    pil_image = Image.fromarray(img_array, 'RGB')
+    image_path = "detected/" + file_name
+    pil_image.save(image_path, format=format)
+    
+    return image_path, file_name
 
+################################
+### HTTP POST REQUESTS START ###
 def printResponse(response):
     print("Status Code : ", response.status_code)
     try:
@@ -152,18 +165,69 @@ def printResponse(response):
 
 def sendImage(file_path):
     with open(file_path, 'rb') as file:
-        files = {'file':file}
-        response = requests.post("http://118.219.42.214:8080/api/image/upload", files=files)
+        data = MultipartEncoder(
+            fields={
+                'file': (file_path, file, 'image/jpeg')
+            }
+        )
+        headers = {
+            "Content-Type": data.content_type
+        }
+        response = requests.post("http://118.219.42.214:8080/api/image/upload", headers=headers, data=data)
         printResponse(response)
 
-def postImage(img, format="JPEG"):
-    path = "/" + datetime.now().strftime('%Y_%m_%dT%H:%M:%S') + "jpg"
-    img_array = cudaToNumpy(img)
-    pil_image = Image.fromarray(img_array, 'RGB')
-    image_title = "detected" + path
-    pil_image.save(image_title, format=format)
-    # sendImage(image_title)
+def getFcm(title, body):
+    fcm = {
+        'token' : 'eb9PJybxQ66VOlakaltS42:APA91bHEQpdDaUS1LRxZoMl701oYkN4ntF7uNdDfN0C_mSfe1CO4TnR-wEpa19ofi_RhmkG_Ew90FfRoBTMoW9jEgxvlev3DT0iC2D-x1ZzwjJEKlJYbzpdp4TaRvRPbLPtMhUAWHoav',
+        'title' : title,
+        'body' : body
+    }
+    
+    return fcm
+    
+def getLog(content, camId=1, fileName="/path/to/image.jpg"):
+    log = {
+        "camId": camId,
+        "content": content,
+        "imagePath": fileName, 
+        "createdAt": datetime.now().strftime('%Y-%m-%dT%H:%M:%S'),
+        "isChecked": False
+    }
+    
+    return log
 
+def getLocation(loc):
+    location = {
+        "location" : loc
+    }
+    return location
+
+def sendHttpPost(url, data):
+    headers = {
+        "Content-Type": "application/json"
+    }
+    
+    response = requests.post(url, data=json.dumps(data), headers=headers)
+    
+    printResponse(response)
+
+def sendFcm(fcm):
+    sendHttpPost("http://118.219.42.214:8080/api/fcm/send", fcm)
+
+def sendLog(log):
+    sendHttpPost("http://118.219.42.214:8080/api/logs", log)
+
+def sendLocation(loc):
+    sendHttpPost("http://118.219.42.214:8080/api/cameras", loc)
+
+### HTTP POST REQUESTS END ###
+##############################
+
+##############################
+### MAIN ###
+# send location data to the server
+location = getLocation("디지털관 2층 1번 카메라")
+sendLocation(location)
 
 # load the pose estimation model
 net = poseNet(args.network, sys.argv, args.threshold)
@@ -233,7 +297,18 @@ while True:
 
             if detection_flag :
                 fall_count += 1
-                postImage(img)
+                
+                # save the image to a file and send it to the server
+                imgPath, fileName = saveImage(img)
+                sendImage(imgPath)
+                
+                # send a log to the server
+                log = getLog("넘어짐 감지됨", fileName=fileName)
+                sendLog(log)
+                
+                # send a FCM to the user
+                fcm = getFcm("위험 상황이 감지되었습니다", "환자가 넘어졌습니다 on Jetson TX2")
+                sendFcm(fcm)
 
     if wait_flag:
           wait_count += 1
