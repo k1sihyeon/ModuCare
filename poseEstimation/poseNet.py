@@ -145,7 +145,7 @@ def detect_fall(pose):
         detection_flag = False
 
 def saveImage(img, format="JPEG"):
-    file_name = "/" + datetime.now().strftime('%Y_%m_%dT%H:%M:%S') + "jpg"
+    file_name = datetime.now().strftime('%Y_%m_%dT%H:%M:%S') + ".jpg"
     img_array = cudaToNumpy(img)
     pil_image = Image.fromarray(img_array, 'RGB')
     image_path = "detected/" + file_name
