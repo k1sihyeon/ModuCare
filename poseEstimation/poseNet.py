@@ -180,9 +180,12 @@ def sendImage(file_path):
         response = requests.post("http://118.219.42.214:8080/api/image/upload", headers=headers, data=data)
         printResponse(response)
 
-def getFcm(title, body):
+def getFcm(title, body, idx):
+    token = ['eb9PJybxQ66VOlakaltS42:APA91bHEQpdDaUS1LRxZoMl701oYkN4ntF7uNdDfN0C_mSfe1CO4TnR-wEpa19ofi_RhmkG_Ew90FfRoBTMoW9jEgxvlev3DT0iC2D-x1ZzwjJEKlJYbzpdp4TaRvRPbLPtMhUAWHoav', 
+             'duAOIfeARcKGpCSAicPgR4:APA91bE6-PNzM8x-PsK-V-L-qMdNEbFn3xI-xAqXdf0V8kGZL0K-To9-bRSw1w_78r41gG6LImoJWDJqlJhkeButSMC1FA65tabEfTDF1v9dH1HvGs_3S34vRtxdCTAWpUUM7-oTthJA',
+             'fWqN_BXPRFaN6yMRKXEqLO:APA91bEWUt9AvLsQAQfQSiE4WAAbpuGMymMBvsOU9wMmIqrTLUxL31ihsSTNj3Hsjgds92fc1DHFJGl0rq7bgbnutwo-cYS9V_jcV2KmoAMQiPV1bAd5-uWBU_H_oggEr5GqjUcT-T0Z']
     fcm = {
-        'token' : 'eb9PJybxQ66VOlakaltS42:APA91bHEQpdDaUS1LRxZoMl701oYkN4ntF7uNdDfN0C_mSfe1CO4TnR-wEpa19ofi_RhmkG_Ew90FfRoBTMoW9jEgxvlev3DT0iC2D-x1ZzwjJEKlJYbzpdp4TaRvRPbLPtMhUAWHoav',
+        'token' : token[idx],
         'title' : title,
         'body' : body
     }
@@ -236,8 +239,9 @@ def sendFallDetection(img): #thread
     sendLog(log)
                 
     # send a FCM to the user
-    fcm = getFcm("위험 상황이 감지되었습니다", "환자가 넘어졌습니다 on Jetson TX2")
-    sendFcm(fcm)
+    for i in range(3):
+        fcm = getFcm("위험 상황이 감지되었습니다", "환자가 넘어졌습니다 on Jetson TX2", i)
+        sendFcm(fcm)
                 
 ### HTTP POST REQUESTS END ###
 ##############################
