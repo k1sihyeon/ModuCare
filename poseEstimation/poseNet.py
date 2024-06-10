@@ -200,9 +200,11 @@ def getLog(content, camId=1, fileName="nullImage.jpeg"):
     
     return log
 
-def getLocation(loc):
+def getLocation(loc, lat=36.0, lng=128.0):
     location = {
-        "location" : loc
+        "location" : loc,
+        "latitude" : lat,
+        "longitude" : lng
     }
     return location
 
@@ -243,7 +245,7 @@ def sendFallDetection(img): #thread
 ##############################
 ### MAIN ###
 # send location data to the server
-location = getLocation("디지털관 2층 1번 카메라")
+location = getLocation("디지털관 2층 1번 카메라", 36.1458301, 128.3924753)
 sendLocation(location)
 
 # load the pose estimation model
