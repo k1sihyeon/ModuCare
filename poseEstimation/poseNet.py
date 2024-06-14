@@ -321,11 +321,8 @@ while True:
             if detection_flag :
                 fall_count += 1
                 
-                # postThread = threading.Thread(target=sendFallDetection, args=(img,))
-                # postThread.start()
-                
-                # without threading
-                sendFallDetection(img)
+                postThread = threading.Thread(target=sendFallDetection, args=(img,))
+                postThread.start()
                 
 
     # deactivate detect_fall() function until the wait_flag becomes false
