@@ -1,3 +1,11 @@
+# Link 
+- Backend : Spring Boot
+  - [https://github.com/k1sihyeon/ModuCare-SpringBoot](https://github.com/k1sihyeon/ModuCare-SpringBoot)
+- Frontend : Android
+  - [https://github.com/k1sihyeon/ModuCare-Android](https://github.com/k1sihyeon/ModuCare-Android)
+
+<br><br>
+
 # 1. 서론
 ## 개발 배경
 최근 몇 년간 사회복지시설에서의 안전사고가 증가하고 있다. 특히, 노약자 및 장애인이 대부분을 차지하는 사회복지시설 이용자들은 신체적 취약성으로 인해 위험 상황에 빠질 가능성이 크며 신속한 도움을 필요로 한다. 그러나, 대부분의 사회복지시설은 24시간으로 운영되고 있음에도 불구하고 인력 부족 및 안전 관리에 어려움을 겪고 있다.
